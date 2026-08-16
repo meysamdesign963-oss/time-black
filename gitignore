@@ -1,0 +1,82 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.db-journal
+db/*.db
+db/*.db-journal
+
+# Prisma
+prisma/migrations/migration_lock.toml
+
+# Logs
+dev.log
+server.log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun-error.log*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploads (user-generated content)
+public/uploads/images/*
+!public/uploads/images/.gitkeep
+
+# Tool results / agent artifacts
+tool-results/
+agent-ctx/
+worklog.md
+
+# Test / temp
+coverage/
+.nyc_output/
+*.tsbuildinfo
+next-env.d.ts
+
+# Package manager files
+bun.lock
+package-lock.json
+
+# Uploaded files
+upload/
+
+# Mini services
+mini-services/*
+!mini-services/.gitkeep
+
+# Canvas files
+*.canvas
+
+# RAR archives
+*.rar
+
+# Misc
+*.tgz
+.caddy/

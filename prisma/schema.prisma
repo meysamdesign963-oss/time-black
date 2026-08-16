@@ -1,0 +1,371 @@
+// Prisma schema for Time Black platform
+// docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Roles: BOSS (first user, super admin), ADMIN, USER
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  email        String?  @unique
+  phone        String?  @unique
+  passwordHash String?
+  bio          String?
+  avatarUrl    String?
+  coverUrl     String?
+  role         String   @default("USER") // BOSS | ADMIN | USER
+  status       String   @default("ACTIVE") // ACTIVE | BLOCKED | RESTRICTED
+  // Auth method preferences
+  authMethod   String   @default("PASSWORD") // PASSWORD | OTP
+  // Admin restrictions (JSON string: { canPost, canComment, canMessage, ... })
+  restrictions String   @default("") // empty = no restrictions
+  // Stats cache (denormalized for leaderboard performance)
+  totalSeconds Int      @default(0)
+  currentRank  Int      @default(0)
+  prevRank     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tasks          Task[]
+  timeEntries    TimeEntry[]
+  posts          Post[]
+  postLikes      PostLike[]
+  comments       Comment[]
+  commentLikes   CommentLike[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+  otpCodes       OtpCode[]
+  followers      Follow[]      @relation("FollowFollower")
+  followees      Follow[]      @relation("FollowFollowee")
+  sessions       Session[]
+  sentMessages   Message[]     @relation("MessageSender")
+  receivedMessages Message[]   @relation("MessageRecipient")
+  reportsFiled   Report[]      @relation("ReportReporter")
+  reportsAgainst Report[]      @relation("ReportTarget")
+  reportsResolved Report[]     @relation("ReportResolver")
+  awards         UserAward[]
+
+  @@index([role])
+  @@index([status])
+}
+
+/// Single task owned by a user
+model Task {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  description   String?
+  targetSeconds Int      @default(0)
+  status        String   @default("ACTIVE") // ACTIVE | DONE | CANCELLED
+  totalSeconds  Int      @default(0)
+  color         String   @default("#e0cba8")
+  category      String   @default("general") // general | study | work | exercise | reading | personal | project
+  priority      String   @default("medium") // low | medium | high | urgent
+  tags          String   @default("") // comma-separated
+  dueDate       DateTime?
+  recurrence    String   @default("none") // none | daily | weekly | monthly
+  parentId      String?  // for subtasks
+  order         Int      @default(0) // for sorting
+  pomodoroCount Int      @default(0) // number of pomodoro sessions completed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeEntries  TimeEntry[]
+  subtasks     Task[]      @relation("TaskSubtask")
+  parent       Task?       @relation("TaskSubtask", fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, category])
+  @@index([parentId])
+  @@index([dueDate])
+}
+
+/// A logged time session for a task
+model TimeEntry {
+  id          String    @id @default(cuid())
+  userId      String
+  taskId      String
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  durationSec Int       @default(0)
+  status      String    @default("COMPLETED") // RUNNING | COMPLETED | CANCELLED | PAUSED
+  note        String?
+  sessionType String    @default("focus") // focus | break | pomodoro
+  pomodoroIdx Int       @default(0) // which pomodoro in the session
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+  @@index([taskId])
+  @@index([userId, sessionType, startedAt])
+}
+
+/// User-generated content (posts)
+model Post {
+  id           String   @id @default(cuid())
+  userId       String
+  content      String
+  imageUrl     String?
+  videoUrl     String?
+  mediaType    String   @default("NONE") // NONE | IMAGE | VIDEO
+  tags         String   @default("") // comma-separated hashtags
+  visibility   String   @default("PUBLIC") // PUBLIC | PRIVATE
+  status       String   @default("PUBLISHED") // DRAFT | PUBLISHED | HIDDEN
+  likeCount    Int      @default(0)
+  commentCount Int      @default(0)
+  viewCount    Int      @default(0)
+  repostCount  Int      @default(0)
+  // Repost / quote feature: if repostOfId is set, this post is a repost
+  repostOfId   String?  // original post ID (for reposts)
+  quoteText    String?  // optional quote when reposting
+  isRepost     Boolean  @default(false)
+  // SEO fields
+  slug         String?  @unique // SEO-friendly URL slug
+  metaDescription String? // custom meta description (auto-generated if null)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes    PostLike[]
+  comments Comment[]
+  reposts  Post[]     @relation("PostRepost") // posts that repost this one
+  original Post?      @relation("PostRepost", fields: [repostOfId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@index([visibility, status, createdAt])
+  @@index([status, createdAt])
+  @@index([repostOfId])
+}
+
+/// Likes on posts (for proper like tracking + unique constraint)
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+/// Comments on posts (supports replies via parentId self-relation)
+model Comment {
+  id           String   @id @default(cuid())
+  postId       String
+  userId       String
+  content      String
+  parentId     String?  // null = top-level comment; set = reply to another comment
+  likeCount    Int      @default(0)
+  replyCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReply", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReply")
+  likes   CommentLike[]
+
+  @@index([postId, createdAt])
+  @@index([parentId])
+  @@index([userId])
+}
+
+/// Likes on comments
+model CommentLike {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId])
+}
+
+/// Notification center
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // RANK_CHANGE | LIKE | COMMENT | SYSTEM | TASK
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+}
+
+/// Follow relationships
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  followeeId String
+  createdAt  DateTime @default(now())
+
+  follower User @relation("FollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee User @relation("FollowFollowee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followeeId])
+  @@index([followeeId])
+}
+
+/// OTP codes for phone verification
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String?
+  phone     String
+  code      String
+  purpose   String   @default("LOGIN") // LOGIN | REGISTER
+  consumed  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phone, consumed, expiresAt])
+}
+
+/// Session table for concurrent-session control & audit
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  jti          String   @unique
+  refreshToken String   @unique
+  ip           String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  revoked      Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revoked])
+}
+
+/// Audit trail of sensitive actions
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String // VIEW_PHONE | DELETE_TASK | DOWNLOAD_FILE | LOGIN | ...
+  ip        String?
+  meta      String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+/// Site-wide settings (admin controlled)
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
+
+/// Competition period
+model CompetitionPeriod {
+  id        String   @id @default(cuid())
+  name      String
+  startAt   DateTime
+  endAt     DateTime
+  status    String   @default("ACTIVE") // ACTIVE | ENDED
+  createdAt DateTime @default(now())
+}
+
+/// Site-wide announcements broadcast by admins
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  type      String   @default("INFO") // INFO | WARNING | SUCCESS
+  active    Boolean  @default(true)
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Direct messages between users (1-on-1 conversations)
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  recipientId String
+  content     String
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, createdAt])
+  @@index([recipientId, isRead, createdAt])
+}
+
+/// User-submitted reports/tickets to admin
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String?  // null = anonymous
+  reportedUserId String? // user being reported (if any)
+  reportedPostId String? // post being reported (if any)
+  type        String   // BUG | ABUSE | SPAM | FEATURE_REQUEST | OTHER | FEEDBACK
+  subject     String
+  body        String
+  status      String   @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | DISMISSED
+  priority    String   @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
+  // Admin response
+  adminResponse String?
+  resolvedById String?
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reporter  User?  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  reportedUser User? @relation("ReportTarget", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  resolver  User?  @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([reporterId])
+  @@index([type])
+}
+
+/// Awards/prizes given to users (winner badges)
+model UserAward {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // MONTHLY_WINNER | WEEKLY_WINNER | TOP_3 | SPECIAL | ACHIEVEMENT
+  title       String   // e.g. "برنده ماه مرداد ۱۴۰۵"
+  description String?
+  period      String?  // e.g. "1405-05" (year-month)
+  rank        Int      @default(1) // 1, 2, 3
+  icon        String   @default("trophy") // trophy | medal | crown | star
+  color       String   @default("#e0cba8")
+  awardedAt   DateTime @default(now())
+  awardedBy   String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, awardedAt])
+  @@index([type, period])
+}

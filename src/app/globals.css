@@ -1,0 +1,401 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-vazirmatn), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Vazirmatn", Georgia, serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ========================================
+   MODERN DARK AMBER THEME (Yellow Accent)
+   All colors centralized here.
+   ======================================== */
+:root,
+.dark {
+  --radius: 0.85rem; /* Slightly more rounded for modern feel */
+
+  /* ── Core Palette ── */
+  --bg-deep:        #08080a; /* Deep void black */
+  --background:     #0c0c0f; /* Modern rich dark */
+  --foreground:     #fafafa; /* Clean white */
+
+  /* ── Surfaces ── */
+  --card:           #141417; /* Elevated dark card */
+  --card-hover:     #1c1c20;
+  --card-foreground: #fafafa;
+  --popover:        #161619;
+  --popover-foreground: #fafafa;
+  --secondary:      #1e1e22;
+  --secondary-hover: #26262b;
+  --secondary-foreground: #e4e4e7;
+  --muted:          #18181b;
+  --muted-hover:    #1f1f23;
+  --muted-foreground: #71717a; /* Zinc 500 - perfect secondary text */
+
+  /* ── Accent Colors (Dark Elegant Yellow) ── */
+  --gold:           #eab308; /* Dark elegant yellow (Amber 500) */
+  --gold-light:     #facc15; /* Brighter yellow for highlights */
+  --gold-dark:      #ca8a04; /* Deeper mustard for gradients */
+  --gold-glow:      rgba(234, 179, 8, 0.15);
+  --primary:        #eab308;
+  --primary-foreground: #0c0c0f; /* Dark text on yellow buttons */
+
+  /* Modern Emerald Accent (For success/habits) */
+  --sage:           #10b981; 
+  --sage-light:     #34d399;
+  --sage-dark:      #059669;
+  --sage-glow:      rgba(16, 185, 129, 0.15);
+  --accent:         #10b981;
+  --accent-foreground: #0c0c0f;
+
+  /* Modern Red Destructive */
+  --terracotta:     #ef4444;
+  --terracotta-light: #f87171;
+  --terracotta-dark: #dc2626;
+  --terracotta-glow: rgba(239, 68, 68, 0.15);
+  --destructive:    #ef4444;
+
+  /* Additional Charts Colors */
+  --violet:         #a78bfa;
+  --violet-glow:    rgba(167, 139, 250, 0.15);
+
+  --sky:            #38bdf8;
+  --sky-glow:       rgba(56, 189, 248, 0.15);
+
+  /* ── Borders & Inputs (Subtle) ── */
+  --border:         #27272a; /* Zinc 800 */
+  --border-hover:   #3f3f46;
+  --input:          #27272a;
+  --ring:           #eab308;
+
+  /* ── Charts ── */
+  --chart-1: #eab308; /* Yellow */
+  --chart-2: #10b981; /* Emerald */
+  --chart-3: #ef4444; /* Red */
+  --chart-4: #a78bfa; /* Violet */
+  --chart-5: #38bdf8; /* Sky */
+
+  /* ── Sidebar ── */
+  --sidebar:        #0a0a0c; /* Deepest dark */
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #eab308;
+  --sidebar-primary-foreground: #0c0c0f;
+  --sidebar-accent: #18181b;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #1f1f23;
+  --sidebar-ring:  #eab308;
+
+  /* ── Status Colors ── */
+  --success:        #10b981;
+  --warning:        #eab308;
+  --danger:         #ef4444;
+  --info:           #38bdf8;
+
+  /* ── Shadows ── */
+  --shadow-sm:  0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md:  0 4px 16px -4px rgba(0, 0, 0, 0.6);
+  --shadow-lg:  0 12px 28px -8px rgba(0, 0, 0, 0.7);
+  --shadow-xl:  0 20px 48px -12px rgba(0, 0, 0, 0.8);
+  --shadow-gold: 0 0 24px -4px rgba(234, 179, 8, 0.3);
+  --shadow-sage: 0 0 24px -4px rgba(16, 185, 129, 0.3);
+
+  /* ── Transitions ── */
+  --ease-smooth:    cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast:  150ms;
+  --duration-normal: 250ms;
+  --duration-slow:  400ms;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground;
+    min-height: 100vh;
+  }
+  body {
+    /* Subtle radial glows for modern depth */
+    background-image:
+      radial-gradient(
+        circle at 15% 12%,
+        var(--gold-glow) 0%,
+        transparent 35%
+      ),
+      radial-gradient(
+        circle at 85% 80%,
+        var(--sage-glow) 0%,
+        transparent 40%
+      );
+    background-attachment: fixed;
+  }
+
+  /* Modern Sleek Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px; /* Narrower */
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent; /* Transparent track */
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+    background-clip: padding-box;
+  }
+
+  /* Selection */
+  ::selection {
+    background: rgba(234, 179, 8, 0.25);
+    color: var(--gold-light);
+  }
+}
+
+/* ========================================
+   UTILITIES — Effects & Components
+   ======================================== */
+@layer utilities {
+  /* ── Glassmorphism ── */
+  .glass {
+    background: rgba(20, 20, 23, 0.65);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(39, 39, 42, 0.6);
+  }
+  .glass-strong {
+    background: rgba(12, 12, 15, 0.85);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(39, 39, 42, 0.7);
+  }
+  .glass-gold {
+    background: rgba(234, 179, 8, 0.06);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid rgba(234, 179, 8, 0.2);
+  }
+
+  /* ── Persian Digits ── */
+  .fa-num {
+    font-feature-settings: "ss01";
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Typography ── */
+  /* Changed to Sans-Serif for modern dashboard feel */
+  .font-academic {
+    font-family: var(--font-sans);
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+  .text-gradient-gold {
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .text-gradient-sage {
+    background: linear-gradient(135deg, var(--sage-light) 0%, var(--sage-dark) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* ── Card Effects ── */
+  .card-lift {
+    transition:
+      transform var(--duration-normal) var(--ease-smooth),
+      box-shadow var(--duration-normal) var(--ease-smooth),
+      border-color var(--duration-normal) var(--ease-smooth);
+  }
+  .card-lift:hover {
+    transform: translateY(-3px);
+    border-color: rgba(234, 179, 8, 0.4);
+    box-shadow: 
+      var(--shadow-lg), 
+      0 0 0 1px rgba(234, 179, 8, 0.1),
+      0 0 20px -5px rgba(234, 179, 8, 0.2);
+  }
+  .card-glow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+  .card-glow-sage {
+    box-shadow: var(--shadow-sage);
+  }
+
+  /* ── Animations ── */
+  @keyframes soft-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .animate-soft-pulse {
+    animation: soft-pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 20px -4px var(--gold-glow);
+    }
+    50% {
+      box-shadow: 0 0 40px -4px rgba(234, 179, 8, 0.4);
+    }
+  }
+  .animate-glow-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up var(--duration-slow) var(--ease-smooth) both;
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .animate-scale-in {
+    animation: scale-in var(--duration-normal) var(--ease-bounce) both;
+  }
+
+  /* ── Flip Clock ── */
+  .flip-card {
+    perspective: 600px;
+  }
+  .flip-card-inner {
+    transform-style: preserve-3d;
+    transition: transform 0.6s var(--ease-smooth);
+  }
+  .flip-card.flipped .flip-card-inner {
+    transform: rotateX(180deg);
+  }
+  .flip-card-front,
+  .flip-card-back {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .flip-card-back {
+    transform: rotateX(180deg);
+  }
+  @keyframes flip-down {
+    0% {
+      transform: rotateX(0deg);
+    }
+    50% {
+      transform: rotateX(-90deg);
+    }
+    100% {
+      transform: rotateX(0deg);
+    }
+  }
+  .animate-flip-down {
+    animation: flip-down 0.6s var(--ease-smooth);
+  }
+
+  /* ── Timer Ring Glow ── */
+  .timer-ring-glow {
+    filter: drop-shadow(0 0 12px var(--gold-glow));
+  }
+  .timer-ring-glow-sage {
+    filter: drop-shadow(0 0 12px var(--sage-glow));
+  }
+
+  /* ── Fullscreen Timer ── */
+  .timer-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--background);
+  }
+
+  /* ── Shimmer Loading ── */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted) 25%,
+      var(--card-hover) 50%,
+      var(--muted) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* ── Smooth Transitions ── */
+  .transition-smooth {
+    transition: all var(--duration-normal) var(--ease-smooth);
+  }
+  .transition-fast {
+    transition: all var(--duration-fast) var(--ease-smooth);
+  }
+  .transition-bounce {
+    transition: all var(--duration-normal) var(--ease-bounce);
+  }
+}
