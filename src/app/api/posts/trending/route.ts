@@ -32,6 +32,7 @@ export async function GET(request: Request) {
       commentCount: true,
       createdAt: true,
       tags: true,
+      slug: true,
       user: {
         select: {
           id: true,

@@ -26,7 +26,7 @@ export async function POST(
   const { id } = await params;
   const post = await db.post.findUnique({
     where: { id },
-    select: { id: true, userId: true, status: true, visibility: true },
+    select: { id: true, userId: true, status: true, visibility: true, slug: true },
   });
   if (!post) return notFound("پست یافت نشد");
 
@@ -76,7 +76,7 @@ export async function POST(
           type: "LIKE",
           title: "لایک جدید",
           message: `${user.displayName} پست شما را لایک کرد`,
-          link: `/post/${id}`,
+          link: post.slug ? `/post/${post.slug}` : null,
         },
       });
     } catch {

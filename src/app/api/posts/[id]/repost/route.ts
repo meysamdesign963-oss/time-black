@@ -24,7 +24,7 @@ export async function POST(
 
   const original = await db.post.findUnique({
     where: { id },
-    select: { id: true, userId: true, status: true, visibility: true },
+    select: { id: true, userId: true, status: true, visibility: true, slug: true },
   });
   if (!original) return notFound("پست یافت نشد");
   if (original.status !== "PUBLISHED" || original.visibility !== "PUBLIC")
@@ -36,8 +36,7 @@ export async function POST(
     ? sanitizeText(body.quoteText).slice(0, 500)
     : null;
   const content = quoteText || "ری‌پست";
-  const tempId = Math.random().toString(36).slice(2, 8);
-  const slug = generateSlug(content, tempId);
+  const slug = generateSlug(content);
 
   // Atomic: create repost + increment counter in transaction
   let repost;
@@ -81,7 +80,7 @@ export async function POST(
         userId: original.userId, type: "SYSTEM",
         title: "ری‌پست جدید",
         message: `${user.displayName} پست شما را ری‌پست کرد`,
-        link: `/post/${id}`,
+        link: original.slug ? `/post/${original.slug}` : null,
       },
     });
   } catch { /* noop */ }

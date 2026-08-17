@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     where: {
       phone,
       code: hashOtp(code),
+      purpose: "LOGIN",
       consumed: false,
       expiresAt: { gt: new Date() },
     },

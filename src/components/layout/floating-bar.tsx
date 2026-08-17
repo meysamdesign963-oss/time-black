@@ -35,11 +35,13 @@ export function FloatingBar() {
         };
       }>("/api/stats/me");
       if (!active || !res.ok || !res.data?.stats) return;
+      const prevRank = res.data.stats.prevRank ?? 0;
+      const currentRank = user?.currentRank || 0;
       setStats({
         todaySeconds: res.data.stats.todaySeconds || 0,
-        rank: user?.currentRank || 0,
+        rank: currentRank,
         activeTasks: res.data.stats.taskCounts?.ACTIVE || 0,
-        rankDelta: 0,
+        rankDelta: prevRank > 0 ? prevRank - currentRank : 0,
       });
     };
     load();
@@ -53,7 +55,7 @@ export function FloatingBar() {
   if (!user) return null;
 
   return (
-    <div className="sticky bottom-0 z-40 mx-4 mb-4">
+    <div className="sticky bottom-16 z-40 mx-4 mb-2">
       <div className="glass-strong flex items-center justify-around gap-2 rounded-2xl border border-border/60 p-2 shadow-xl">
         <button
           onClick={() => navigate("timer")}

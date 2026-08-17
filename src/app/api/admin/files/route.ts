@@ -135,14 +135,14 @@ export async function DELETE(request: Request) {
   const fileUrl = url.searchParams.get("path");
   if (!fileUrl) return fail("مسیر فایل الزامی است", 400);
 
-  // Security: only allow deleting files under /uploads/
-  if (!fileUrl.startsWith("/uploads/")) {
+  // Prevent path traversal on RAW input BEFORE normalization
+  if (fileUrl.includes("..")) {
     return fail("مسیر فایل نامعتبر است", 400);
   }
 
-  // Prevent path traversal
+  // Normalize and verify the path stays within /uploads/
   const normalized = path.normalize(fileUrl);
-  if (normalized.includes("..")) {
+  if (!normalized.startsWith("/uploads/")) {
     return fail("مسیر فایل نامعتبر است", 400);
   }
 

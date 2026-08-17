@@ -34,10 +34,14 @@ export async function verifyPassword(
  * Decide the role for a new user.
  * The very first registered user becomes BOSS (super admin).
  * Everyone else is a normal USER.
+ * Uses a transaction to prevent TOCTOU race condition where multiple
+ * concurrent registrations could all get BOSS role.
  */
 export async function decideRoleForNewUser(): Promise<string> {
-  const count = await db.user.count();
-  return count === 0 ? "BOSS" : "USER";
+  return await db.$transaction(async (tx) => {
+    const count = await tx.user.count();
+    return count === 0 ? "BOSS" : "USER";
+  }, { isolationLevel: "Serializable" });
 }
 
 /** Generate a 5-digit OTP code */

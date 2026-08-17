@@ -116,11 +116,16 @@ export function NotificationsView() {
         );
       }
     }
-    // Navigate if link is present (e.g. /profile/username)
+    // Navigate if link is present (e.g. /profile/username, /post/slug)
     if (n.link) {
-      const match = n.link.match(/\/profile\/([^/]+)/);
-      if (match) {
-        navigate("profile", match[1]);
+      const postMatch = n.link.match(/\/post\/([^/]+)/);
+      if (postMatch) {
+        navigate("post", postMatch[1]);
+        return;
+      }
+      const profileMatch = n.link.match(/\/profile\/([^/]+)/);
+      if (profileMatch) {
+        navigate("profile", profileMatch[1]);
         return;
       }
     }
@@ -154,7 +159,7 @@ export function NotificationsView() {
         onValueChange={(v) => setFilter(v as Filter)}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
           <TabsTrigger value="all">همه</TabsTrigger>
           <TabsTrigger value="unread">خوانده‌نشده</TabsTrigger>
           <TabsTrigger value="rank">تغییر رتبه</TabsTrigger>

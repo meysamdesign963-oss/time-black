@@ -3,19 +3,40 @@
  */
 
 /**
- * Generate a URL-safe slug from text.
- * Preserves Persian/Arabic characters, replaces spaces with dashes.
- * Appends a short random suffix for uniqueness.
+ * Generate a URL-safe, English-only slug for a post.
+ * Uses short readable English words + random alphanumeric suffix for uniqueness.
+ * No Persian/Arabic characters in URL — better for SEO and shareability.
+ *
+ * Format:  <word1>-<word2>-<random6>
+ * Example:  steady-dawn-x7k2m9
  */
-export function generateSlug(text: string, suffix: string): string {
-  const base = text
-    .slice(0, 60)
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/[^\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9-]/g, "")
-    .toLowerCase();
-  return `${base || "post"}-${suffix}`;
+const SLUG_WORDS = [
+  "swift","calm","bright","noble","grand","vivid","solid","prime",
+  "lunar","solar","ocean","flame","frost","bloom","stone","cloud",
+  "amber","coral","cedar","maple","sage","raven","otter","crane",
+  "pearl","delta","orbit","pulse","spark","gleam","haze","drift",
+  "crest","blaze","dusk","dawn","mist","reef","vale","ridge",
+  "haven","quest","forge","realm","vigor","grace","epoch","ember",
+  "focus","logic","nexus","pixel","vault","prism","depth","latch",
+  "glyph","plume","brisk","novel","quill","trove","pivot","scout",
+  "craft","flint","moss","brook","thorn","dune","apex","summit",
+  "haste","brave","lucid","crisp","quiet","bold","pure","keen",
+  "warm","cool","dark","fair","lush","rich","rare","safe","vast",
+  "wild","wise","true","free","just","open","real","deep","high",
+];
+
+function pickWords(): string {
+  const w1 = SLUG_WORDS[Math.floor(Math.random() * SLUG_WORDS.length)];
+  const w2 = SLUG_WORDS[Math.floor(Math.random() * SLUG_WORDS.length)];
+  // Avoid duplicate words
+  if (w1 === w2) return pickWords();
+  return `${w1}-${w2}`;
+}
+
+export function generateSlug(_text: string, suffix?: string): string {
+  const base = pickWords();
+  const rand = suffix || Math.random().toString(36).slice(2, 8);
+  return `${base}-${rand}`;
 }
 
 /**
@@ -46,6 +67,7 @@ export function generatePostJsonLd(post: {
   user: { displayName: string; username: string };
   slug: string | null;
 }): Record<string, unknown> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir";
   return {
     "@context": "https://schema.org",
     "@type": "SocialMediaPosting",
@@ -73,7 +95,8 @@ export function generatePostJsonLd(post: {
       ? { image: post.imageUrl, thumbnailUrl: post.imageUrl }
       : {}),
     ...(post.videoUrl ? { video: post.videoUrl } : {}),
-    url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir"}/post/${post.slug || ""}`,
+    mainEntityOfPage: `${baseUrl}/post/${post.slug || ""}`,
+    url: `${baseUrl}/post/${post.slug || ""}`,
   };
 }
 
@@ -87,6 +110,7 @@ export function generateProfileJsonLd(user: {
   avatarUrl: string | null;
   createdAt: string;
 }): Record<string, unknown> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir";
   return {
     "@context": "https://schema.org",
     "@type": "ProfilePage",
@@ -97,6 +121,7 @@ export function generateProfileJsonLd(user: {
       description: user.bio || undefined,
       image: user.avatarUrl || undefined,
       dateCreated: user.createdAt,
+      url: `${baseUrl}/profile/${user.username}`,
     },
   };
 }
@@ -105,6 +130,7 @@ export function generateProfileJsonLd(user: {
  * Generate JSON-LD for the whole site (Organization).
  */
 export function generateSiteJsonLd(): Record<string, unknown> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir";
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -112,10 +138,10 @@ export function generateSiteJsonLd(): Record<string, unknown> {
     alternateName: "تایم بلک",
     description:
       "پلتفرم رقابت تایم‌محور — تسک‌های خود را تعریف کنید، تایمر را فعال کنید و در رتبه‌بندی ماهانه با دیگران رقابت کنید",
-    url: process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir",
+    url: baseUrl,
     potentialAction: {
       "@type": "SearchAction",
-      target: `${process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir"}/search?q={search_term_string}`,
+      target: `${baseUrl}/search?q={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
   };

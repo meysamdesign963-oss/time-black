@@ -15,6 +15,7 @@ export type CurrentUser = {
   email: string | null;
   phone: string | null;
   avatarUrl: string | null;
+  coverUrl: string | null;
   bio: string | null;
   totalSeconds: number;
   currentRank: number;

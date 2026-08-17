@@ -7,7 +7,7 @@
  * zustand router store. The AppShell provides header/sidebar/footer
  * context-aware scaffolding; this component just renders the active view.
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, Component, type ReactNode, type ErrorInfo } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { useRouterStore } from "@/store/router";
 import { useAuthStore } from "@/store/auth";
@@ -62,6 +62,39 @@ function FullPageLoader() {
       </div>
     </div>
   );
+}
+
+// Simple Error Boundary to prevent white-screen crashes
+class ViewErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(e: Error, info: ErrorInfo) {
+    console.error("[ViewErrorBoundary]", e, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      const { navigate } = useRouterStore.getState();
+      return (
+        <div className="grid min-h-[60vh] place-items-center px-4">
+          <div className="max-w-sm text-center">
+            <div className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-destructive/10 text-destructive">
+              <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+            </div>
+            <h3 className="mb-2 text-lg font-bold text-foreground">خطایی رخ داد</h3>
+            <p className="mb-4 text-sm text-muted-foreground">در بارگذاری محتوای این بخش مشکلی دارد.</p>
+            <button
+              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground"
+              onClick={() => { this.setState({ hasError: false }); navigate("dashboard"); }}
+            >بازگشت به داشبورد</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function ViewSwitch() {
@@ -199,7 +232,7 @@ function ViewSwitch() {
     }
   }, [view, user, waitingForAuth, param]);
 
-  return node;
+  return <ViewErrorBoundary>{node}</ViewErrorBoundary>;
 }
 
 export default function Page({

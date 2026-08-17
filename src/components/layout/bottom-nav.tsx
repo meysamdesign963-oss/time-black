@@ -46,6 +46,7 @@ export function BottomNav() {
               "flex flex-col items-center justify-center gap-1 py-2 text-[10px] transition-colors",
               active ? "text-primary" : "text-muted-foreground",
             )}
+            aria-current={active ? "page" : undefined}
           >
             <Icon className="h-5 w-5" />
             <span>{item.label}</span>

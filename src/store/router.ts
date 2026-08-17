@@ -199,8 +199,16 @@ export const useRouterStore = create<RouterState>((set, get) => ({
     }
   },
   back: () => {
-    // Use browser history (works with pushState clean URLs)
-    if (typeof window !== "undefined") window.history.back();
+    const hist = get().history;
+    if (hist.length > 0) {
+      const prev = hist[hist.length - 1];
+      set({ view: prev, param: null, history: hist.slice(0, -1) });
+      writeToUrl(prev, null);
+      const main = document.getElementById("main-scroll");
+      if (main) main.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      get().navigate("home");
+    }
   },
   initFromUrl: () => {
     const { view, param } = readFromUrl();

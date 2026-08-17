@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   });
 
   await db.otpCode.create({
-    data: { phone, code, purpose, expiresAt },
+    data: { phone, code: hashOtp(code), purpose, expiresAt },
   });
 
   const isDev = process.env.NODE_ENV !== "production";

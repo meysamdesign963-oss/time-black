@@ -153,6 +153,7 @@ export function Sidebar({ adminMode = false }: { adminMode?: boolean }) {
               key={item.key}
               onClick={() => navigate(item.key)}
               title={collapsed ? item.label : undefined}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                 active

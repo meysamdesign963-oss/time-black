@@ -101,6 +101,7 @@ export async function GET(request: Request) {
         commentCount: true,
         viewCount: true,
         repostCount: true,
+        slug: true,
         createdAt: true,
         user: {
           select: {
@@ -278,9 +279,8 @@ export async function POST(request: Request) {
   const visibility = body.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC";
   const status = body.status === "DRAFT" ? "DRAFT" : "PUBLISHED";
 
-  // Generate SEO slug (unique via short ID suffix)
-  const tempId = Math.random().toString(36).slice(2, 8);
-  const slug = generateSlug(content, tempId);
+  // Generate SEO slug (English-only, random words + suffix for uniqueness)
+  const slug = generateSlug(content);
 
   const post = await db.post.create({
     data: {

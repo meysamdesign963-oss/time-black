@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import Page from "../../page";
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir";
+
 /**
- * /post/[slug] — public post detail (clean URL)
- * SEO: dynamic metadata generated from the post's content (direct DB query).
+ * /post/[slug] — public post detail (clean English URL for SEO)
+ * SEO: dynamic metadata generated from the post content (direct DB query).
  */
 
 export async function generateMetadata({
@@ -45,19 +47,22 @@ export async function generateMetadata({
   const excerpt = content.length > 155 ? content.slice(0, 155) + "…" : content;
   const authorName = post.user?.displayName || "کاربر Time Black";
   const title = `${excerpt.slice(0, 60)} | Time Black`;
+  const canonicalUrl = `${BASE_URL}/post/${slug}`;
 
   return {
     title,
     description: excerpt,
-    alternates: { canonical: `/post/${slug}` },
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       title,
       description: excerpt,
       type: "article",
       locale: "fa_IR",
-      images: post.imageUrl ? [{ url: post.imageUrl }] : undefined,
+      url: canonicalUrl,
+      images: post.imageUrl ? [{ url: post.imageUrl, secureUrl: post.imageUrl.replace(/^http:/, "https:") }] : undefined,
       authors: [authorName],
       publishedTime: post.createdAt,
+      siteName: "Time Black",
     },
     twitter: {
       card: post.imageUrl ? "summary_large_image" : "summary",

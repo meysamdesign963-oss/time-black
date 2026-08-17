@@ -46,32 +46,35 @@ export function AppShell({
     return () => window.removeEventListener("popstate", onPopState);
   }, [initFromUrl]);
 
-  // Redirect rules:
-  // - dashboard/admin views require auth; if not logged in → login
-  // - admin views require BOSS/ADMIN role; else → dashboard
-  // - login/register views when already logged in → dashboard
+  // Memoize view-type checks to prevent effect churn
+  const isDashView = isDashboard();
+  const isAdminView = isAdmin();
+
+  // Redirect rules
   useEffect(() => {
     if (!initialized) return;
-    if ((isDashboard() || isAdmin()) && !user) {
+    if ((isDashView || isAdminView) && !user) {
       navigate("login");
       return;
     }
-    if (isAdmin() && user && user.role === "USER") {
+    if (isAdminView && user && user.role === "USER") {
       navigate("dashboard");
       return;
     }
     if ((view === "login" || view === "register") && user) {
       navigate("dashboard");
     }
-  }, [view, user, initialized, isDashboard, isAdmin, navigate]);
+  }, [view, user, initialized, isDashView, isAdminView, navigate]);
 
-  const showSidebar = isDashboard() || isAdmin();
-  const showFloatingBar = isDashboard();
-  const showBottomNav = true;
+  const showSidebar = isDashView || isAdminView;
+  const showFloatingBar = isDashView;
+  const showBottomNav = !isAdminView && !(view === "login" || view === "register");
   const adminMode = isAdmin();
   const compactFooter = showSidebar;
 
   return (
+    <>
+    <a href="#main-scroll" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[9999] rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">رد کرن به محتوا</a>
     <div className="flex min-h-screen flex-col">
       <Header adminMode={adminMode} />
 
@@ -94,6 +97,9 @@ export function AppShell({
       {showBottomNav && <BottomNav />}
       {/* spacer for bottom nav on mobile */}
       <div className="h-14 md:hidden" />
+      {/* Extra spacer for floating bar on dashboard mobile */}
+      {showFloatingBar && <div className="h-20 md:hidden" />}
     </div>
+    </>
   );
 }

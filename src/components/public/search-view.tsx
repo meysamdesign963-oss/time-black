@@ -56,6 +56,7 @@ type FeedPost = {
   id: string;
   content: string;
   imageUrl: string | null;
+  slug: string | null;
   likeCount: number;
   commentCount: number;
   createdAt: string;
@@ -325,7 +326,10 @@ function PostCard({ post }: { post: FeedPost }) {
             </p>
           </div>
         </button>
-        <p className="line-clamp-3 text-sm text-foreground/90 whitespace-pre-wrap">
+        <p
+          className={`line-clamp-3 text-sm text-foreground/90 whitespace-pre-wrap ${post.slug ? "cursor-pointer hover:text-foreground" : ""}`}
+          onClick={() => { if (post.slug) navigate("post", post.slug); }}
+        >
           {post.content}
         </p>
         <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">

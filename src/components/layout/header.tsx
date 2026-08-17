@@ -192,6 +192,8 @@ export function Header({ adminMode = false }: { adminMode?: boolean }) {
 
       {/* Mobile/tablet dropdown nav */}
       {mobileOpen && (
+        <>
+        <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileOpen(false)} />
         <div className="glass-strong border-t border-border lg:hidden">
           <nav className="flex flex-col p-2">
             {PUBLIC_NAV.map((item) => (
@@ -213,6 +215,7 @@ export function Header({ adminMode = false }: { adminMode?: boolean }) {
             ))}
           </nav>
         </div>
+        </>
       )}
     </header>
   );
@@ -242,7 +245,7 @@ function NotificationBell() {
     fetchUnread();
     const id = setInterval(fetchUnread, 30_000); // poll every 30s
     return () => clearInterval(id);
-  }, [user]);
+  }, [user?.id]);
 
   return (
     <button
@@ -283,7 +286,7 @@ function MessageBadge() {
     fetchUnread();
     const id = setInterval(fetchUnread, 30_000);
     return () => clearInterval(id);
-  }, [user]);
+  }, [user?.id]);
 
   if (unread === 0) return null;
   return (

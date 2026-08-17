@@ -40,6 +40,19 @@ export async function POST(
   // Users cannot reveal their own contact via this endpoint (they already see it)
   if (viewer.id === target.id) return forbidden();
 
+  // Authorization: viewer must be following the target user to reveal contact info
+  const followRecord = await db.follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: viewer.id,
+        followingId: target.id,
+      },
+    },
+  });
+  if (!followRecord) {
+    return forbidden("برای مشاهده اطلاعات تماس باید کاربر را دنبال کنید");
+  }
+
   // Audit trail (canvas req #8)
   await writeAudit({
     userId: viewer.id,

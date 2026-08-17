@@ -150,7 +150,7 @@ export async function POST(
 
   const post = await db.post.findUnique({
     where: { id },
-    select: { id: true, userId: true },
+    select: { id: true, userId: true, slug: true },
   });
   if (!post) return notFound("پست یافت نشد");
 
@@ -208,7 +208,7 @@ export async function POST(
             type: "COMMENT",
             title: "پاسخ جدید به کامنت شما",
             message: `${user.displayName} به کامنت شما پاسخ داد`,
-            link: `/post/${id}`,
+            link: post.slug ? `/post/${post.slug}` : null,
           },
         });
       } catch {
@@ -229,7 +229,7 @@ export async function POST(
             type: "COMMENT",
             title: "کامنت جدید",
             message: `${user.displayName} روی پست شما کامنت گذاشت`,
-            link: `/post/${id}`,
+            link: post.slug ? `/post/${post.slug}` : null,
           },
         });
       } catch {

@@ -6,9 +6,10 @@ import { db } from "@/lib/db";
 /**
  * Dynamic sitemap.xml — generated at build/request time.
  * Includes: home, leaderboard, explore, public profiles, public posts.
+ * All URLs are absolute (with base domain) and use English-only slugs for posts.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://timeblack.ir";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir";
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -65,20 +66,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const profilePages: MetadataRoute.Sitemap = users.map((u) => ({
     url: `${baseUrl}/profile/${u.username}`,
     lastModified: u.updatedAt,
-    changeFrequency: "weekly",
+    changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
 
-  // Public posts with slugs
+  // Public posts with English-only slugs
   const posts = await db.post.findMany({
     where: { visibility: "PUBLIC", status: "PUBLISHED", slug: { not: null } },
     select: { slug: true, updatedAt: true },
     take: 1000,
+    orderBy: { updatedAt: "desc" },
   });
   const postPages: MetadataRoute.Sitemap = posts.map((p) => ({
     url: `${baseUrl}/post/${p.slug}`,
     lastModified: p.updatedAt,
-    changeFrequency: "weekly",
+    changeFrequency: "weekly" as const,
     priority: 0.8,
   }));
 
