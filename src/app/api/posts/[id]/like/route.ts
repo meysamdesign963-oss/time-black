@@ -3,6 +3,7 @@
  * -------------------------
  * Toggle like on a post. Creates PostLike if not liked, removes if liked.
  * Updates denormalized likeCount on the post.
+ * Uses transaction for atomicity.
  */
 import { db } from "@/lib/db";
 import { ok, fail, unauthorized, notFound, forbidden } from "@/utils/api-response";
@@ -19,7 +20,7 @@ export async function POST(
   // Rate limit: 30 likes per minute
   const rl = rateLimit(`like:${user.id}`, 30, 60 * 1000);
   if (!rl.ok) {
-    return fail("در حال انجام actions زیاد. کمی صبر کنید.", 429);
+    return fail("در حال انجام عملیات زیاد. کمی صبر کنید.", 429);
   }
 
   const { id } = await params;
@@ -29,35 +30,42 @@ export async function POST(
   });
   if (!post) return notFound("پست یافت نشد");
 
+  // Only allow liking published public posts, or own posts
+  if (post.status !== "PUBLISHED") return notFound("پست یافت نشد");
+  if (post.visibility !== "PUBLIC" && post.userId !== user.id)
+    return forbidden("دسترسی غیرمجاز");
+
   // Check if already liked
   const existing = await db.postLike.findUnique({
     where: { postId_userId: { postId: id, userId: user.id } },
   });
 
   if (existing) {
-    // Unlike
-    await db.postLike.delete({ where: { id: existing.id } });
-    await db.post.update({
-      where: { id },
-      data: { likeCount: { decrement: 1 } },
-    });
-    const res = ok({ liked: false, likeCount: Math.max(0, post.status === "PUBLISHED" ? 0 : 0) });
-    // Get actual count
+    // Unlike -- atomic transaction
+    await db.$transaction([
+      db.postLike.delete({ where: { id: existing.id } }),
+      db.post.update({
+        where: { id },
+        data: { likeCount: { decrement: 1 } },
+      }),
+    ]);
     const updated = await db.post.findUnique({
       where: { id },
       select: { likeCount: true },
     });
     return applyRefresh(
-      ok({ liked: false, likeCount: updated?.likeCount ?? 0 }),
+      ok({ liked: false, likeCount: Math.max(0, updated?.likeCount ?? 0) }),
     );
   }
 
-  // Like
-  await db.postLike.create({ data: { postId: id, userId: user.id } });
-  await db.post.update({
-    where: { id },
-    data: { likeCount: { increment: 1 } },
-  });
+  // Like -- atomic transaction
+  await db.$transaction([
+    db.postLike.create({ data: { postId: id, userId: user.id } }),
+    db.post.update({
+      where: { id },
+      data: { likeCount: { increment: 1 } },
+    }),
+  ]);
 
   // Create notification for post owner (if not self-like)
   if (post.userId !== user.id) {
@@ -68,7 +76,7 @@ export async function POST(
           type: "LIKE",
           title: "لایک جدید",
           message: `${user.displayName} پست شما را لایک کرد`,
-          link: `/posts/${id}`,
+          link: `/post/${id}`,
         },
       });
     } catch {

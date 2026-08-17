@@ -6,13 +6,17 @@ export async function apiFetch<T = unknown>(
   options?: RequestInit,
 ): Promise<{ ok: boolean; data?: T; error?: string }> {
   try {
+    const { headers: optHeaders, ...rest } = options || {};
+    const method = (rest.method || "GET").toUpperCase();
     const res = await fetch(url, {
       credentials: "include",
+      ...rest,
       headers: {
-        "Content-Type": "application/json",
-        ...(options?.headers || {}),
+        ...(method !== "GET" && method !== "HEAD"
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...(optHeaders || {}),
       },
-      ...options,
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json.ok === false) {

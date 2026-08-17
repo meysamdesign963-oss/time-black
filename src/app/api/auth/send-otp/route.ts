@@ -1,8 +1,14 @@
+import crypto from "crypto";
 import { db } from "@/lib/db";
 import { generateOtpCode } from "@/services/auth.service";
 import { isValidPhone, rateLimit } from "@/utils/validation";
 import { ok, fail } from "@/utils/api-response";
 import { parseJsonBody, getClientIp } from "@/lib/route-helpers";
+
+/** Hash OTP code with SHA-256 for secure storage */
+function hashOtp(code: string): string {
+  return crypto.createHash("sha256").update(code).digest("hex");
+}
 
 const MAX_ATTEMPTS = 3;
 const WINDOW_MS = 5 * 60 * 1000;

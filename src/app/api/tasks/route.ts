@@ -5,7 +5,7 @@
  * POST /api/tasks  — create task with enhanced fields
  */
 import { db } from "@/lib/db";
-import { sanitizeText, rateLimit } from "@/utils/validation";
+import { sanitizeText, rateLimit, hasRestriction } from "@/utils/validation";
 import { ok, fail, unauthorized } from "@/utils/api-response";
 import { getAuth, parseJsonBody } from "@/lib/route-helpers";
 
@@ -94,6 +94,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const { user, applyRefresh } = await getAuth(request);
   if (!user) return unauthorized();
+
+  const userWithRestrictions = await db.user.findUnique({
+    where: { id: user.id },
+    select: { restrictions: true },
+  });
+  if (userWithRestrictions && hasRestriction(userWithRestrictions.restrictions || "", "canCreateTask"))
+    return forbidden("شما دسترسی ایجاد تسک ندارید");
 
   const rl = rateLimit(`task:${user.id}`, MAX_TASKS_PER_MIN, 60 * 1000);
   if (!rl.ok) {

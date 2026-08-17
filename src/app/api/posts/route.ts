@@ -11,8 +11,8 @@
  *  - Trending tags endpoint at GET /api/posts/trending
  */
 import { db } from "@/lib/db";
-import { sanitizeText, rateLimit } from "@/utils/validation";
-import { ok, fail, unauthorized } from "@/utils/api-response";
+import { sanitizeText, rateLimit, hasRestriction } from "@/utils/validation";
+import { ok, fail, unauthorized, forbidden } from "@/utils/api-response";
 import { getAuth, parseJsonBody } from "@/lib/route-helpers";
 import { generateSlug } from "@/utils/seo";
 
@@ -25,7 +25,7 @@ function isValidMediaUrl(v: string): boolean {
   if (v.startsWith("/uploads/")) return true;
   try {
     const u = new URL(v);
-    return u.protocol === "http:" || u.protocol === "https:";
+    return u.protocol === "https:";
   } catch {
     return false;
   }
@@ -219,6 +219,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const { user, applyRefresh } = await getAuth(request);
   if (!user) return unauthorized();
+
+  // Check post restriction
+  const userWithRestrictions = await db.user.findUnique({
+    where: { id: user.id },
+    select: { restrictions: true },
+  });
+  if (userWithRestrictions && hasRestriction(userWithRestrictions.restrictions || "", "canPost"))
+    return forbidden("شما دسترسی ارسال پست ندارید");
 
   const rl = rateLimit(`post:${user.id}`, MAX_POSTS_PER_MIN, 60 * 1000);
   if (!rl.ok) {

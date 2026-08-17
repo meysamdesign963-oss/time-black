@@ -11,8 +11,8 @@
  *   - Notifies post owner (for comment) or comment author (for reply)
  */
 import { db } from "@/lib/db";
-import { sanitizeText, rateLimit } from "@/utils/validation";
-import { ok, fail, unauthorized, notFound } from "@/utils/api-response";
+import { sanitizeText, rateLimit, hasRestriction } from "@/utils/validation";
+import { ok, fail, unauthorized, notFound, forbidden } from "@/utils/api-response";
 import { getAuth, parseJsonBody } from "@/lib/route-helpers";
 
 export async function GET(
@@ -126,6 +126,13 @@ export async function POST(
 ) {
   const { user, applyRefresh } = await getAuth(request);
   if (!user) return unauthorized();
+
+  const userWithRestrictions = await db.user.findUnique({
+    where: { id: user.id },
+    select: { restrictions: true },
+  });
+  if (userWithRestrictions && hasRestriction(userWithRestrictions.restrictions || "", "canComment"))
+    return forbidden("شما دسترسی ارسال کامنت ندارید");
 
   const rl = rateLimit(`comment:${user.id}`, 20, 60 * 1000);
   if (!rl.ok) {

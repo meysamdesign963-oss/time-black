@@ -1,18 +1,6 @@
 /**
- * POST /api/posts/[id]/repost
- * ---------------------------
- * Repost a post (with optional quote text).
- *
- * body: { quoteText?: string }
- *
- * Creates a new Post that is a repost of the original:
- *  - isRepost = true
- *  - repostOfId = original post ID
- *  - quoteText = optional user quote
- *  - content = quoteText || "" (so content field stays valid)
- *
- * Increments original post's repostCount.
- * Notifies original post author.
+ * POST /api/posts/[id]/repost -- Repost with optional quote. Transaction-safe.
+ * DELETE /api/posts/[id]/repost -- Undo repost. Transaction-safe.
  */
 import { db } from "@/lib/db";
 import { sanitizeText, rateLimit } from "@/utils/validation";
@@ -41,83 +29,66 @@ export async function POST(
   if (!original) return notFound("پست یافت نشد");
   if (original.status !== "PUBLISHED" || original.visibility !== "PUBLIC")
     return fail("این پست قابل ری‌پست نیست", 400);
-
-  // Prevent reposting own post
   if (original.userId === user.id)
     return fail("نمی‌توانید پست خودتان را ری‌پست کنید", 400);
-
-  // Check if already reposted (one repost per user per post)
-  const existing = await db.post.findFirst({
-    where: { userId: user.id, repostOfId: id, isRepost: true },
-    select: { id: true },
-  });
-  if (existing) return fail("شما قبلاً این پست را ری‌پست کرده‌اید", 400);
 
   const quoteText = body.quoteText
     ? sanitizeText(body.quoteText).slice(0, 500)
     : null;
-
-  // Content for the repost: use quoteText or empty marker
   const content = quoteText || "ری‌پست";
-
-  // Generate slug
   const tempId = Math.random().toString(36).slice(2, 8);
   const slug = generateSlug(content, tempId);
 
-  const repost = await db.post.create({
-    data: {
-      userId: user.id,
-      content,
-      mediaType: "NONE",
-      visibility: "PUBLIC",
-      status: "PUBLISHED",
-      isRepost: true,
-      repostOfId: id,
-      quoteText,
-      slug,
-    },
-    select: {
-      id: true,
-      content: true,
-      quoteText: true,
-      isRepost: true,
-      repostOfId: true,
-      createdAt: true,
-      user: {
-        select: { id: true, username: true, displayName: true, avatarUrl: true },
-      },
-    },
-  });
+  // Atomic: create repost + increment counter in transaction
+  let repost;
+  try {
+    repost = await db.$transaction(async (tx) => {
+      const existing = await tx.post.findFirst({
+        where: { userId: user.id, repostOfId: id, isRepost: true },
+        select: { id: true },
+      });
+      if (existing) throw new Error("ALREADY_REPOSTED");
 
-  // Increment original post's repostCount
-  await db.post.update({
-    where: { id },
-    data: { repostCount: { increment: 1 } },
-  });
+      const created = await tx.post.create({
+        data: {
+          userId: user.id, content, mediaType: "NONE",
+          visibility: "PUBLIC", status: "PUBLISHED",
+          isRepost: true, repostOfId: id, quoteText, slug,
+        },
+        select: {
+          id: true, content: true, quoteText: true, isRepost: true,
+          repostOfId: true, createdAt: true,
+          user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        },
+      });
 
-  // Notify original post author
+      await tx.post.update({
+        where: { id },
+        data: { repostCount: { increment: 1 } },
+      });
+
+      return created;
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "ALREADY_REPOSTED")
+      return fail("شما قبلاً این پست را ری‌پست کرده‌اید", 400);
+    throw e;
+  }
+
   try {
     await db.notification.create({
       data: {
-        userId: original.userId,
-        type: "SYSTEM",
+        userId: original.userId, type: "SYSTEM",
         title: "ری‌پست جدید",
         message: `${user.displayName} پست شما را ری‌پست کرد`,
         link: `/post/${id}`,
       },
     });
-  } catch {
-    // noop
-  }
+  } catch { /* noop */ }
 
   return applyRefresh(ok({ repost }));
 }
 
-/**
- * DELETE /api/posts/[id]/repost
- * -----------------------------
- * Undo a repost (delete the repost post).
- */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -126,20 +97,20 @@ export async function DELETE(
   if (!user) return unauthorized();
 
   const { id } = await params;
-
   const repost = await db.post.findFirst({
     where: { userId: user.id, repostOfId: id, isRepost: true },
     select: { id: true },
   });
   if (!repost) return notFound("ری‌پستی یافت نشد");
 
-  await db.post.delete({ where: { id: repost.id } });
-
-  // Decrement original post's repostCount
-  await db.post.update({
-    where: { id },
-    data: { repostCount: { decrement: 1 } },
-  });
+  // Atomic: delete repost + decrement counter (guard against negative)
+  await db.$transaction([
+    db.post.delete({ where: { id: repost.id } }),
+    db.post.update({
+      where: { id, repostCount: { gt: 0 } },
+      data: { repostCount: { decrement: 1 } },
+    }),
+  ]);
 
   return applyRefresh(ok({ ok: true }));
 }

@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/services/auth.service";
 import { generateAccessToken } from "@/services/token.service";
+import { db } from "@/lib/db";
 import {
   setAccessTokenCookie,
   setRefreshTokenCookie,
@@ -132,7 +133,7 @@ export async function writeAudit(opts: {
   meta?: Record<string, unknown> | null;
 }) {
   try {
-    await (await import("@/lib/db")).db.auditLog.create({
+    await db.auditLog.create({
       data: {
         userId: opts.userId ?? null,
         action: opts.action,
@@ -145,11 +146,14 @@ export async function writeAudit(opts: {
   }
 }
 
-/** Extract client IP from request headers. */
+/** Extract client IP from request headers.
+ *  Uses the LAST entry in x-forwarded-for (set by trusted reverse proxy).
+ */
 export function getClientIp(req: Request): string | null {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    null
-  );
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((s) => s.trim());
+    return parts[parts.length - 1] || null;
+  }
+  return req.headers.get("x-real-ip") || null;
 }

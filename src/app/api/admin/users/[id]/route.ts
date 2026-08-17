@@ -107,7 +107,7 @@ export async function PATCH(
   }
 
   // Password reset
-  if (typeof body.newPassword === "string" && body.newPassword.length >= 8) {
+  if (typeof body.newPassword === "string" && body.newPassword.length >= 8 && /(?=.*[A-Za-z])(?=.*\d)/.test(body.newPassword)) {
     data.passwordHash = await hashPassword(body.newPassword);
     // Revoke all sessions for this user
     await db.session.updateMany({

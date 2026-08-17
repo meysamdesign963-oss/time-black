@@ -75,7 +75,5 @@ export async function POST(request: Request) {
   return res;
 }
 
-export function GET(request: Request) {
-  // also allow GET for convenience
-  return POST(request);
-}
+// NOTE: GET handler intentionally removed to prevent CSRF-via-GET attacks.
+// Token refresh MUST use POST.

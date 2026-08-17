@@ -3,7 +3,6 @@ import { rateLimit } from "@/utils/validation";
 import { ok, fail, unauthorized, notFound } from "@/utils/api-response";
 import { getAuth, parseJsonBody } from "@/lib/route-helpers";
 
-// Spam prevention: 10 timer-starts per minute per user.
 const MAX_STARTS_PER_MIN = 10;
 
 export async function POST(request: Request) {
@@ -31,53 +30,40 @@ export async function POST(request: Request) {
   if (task.userId !== user.id) return fail("دسترسی غیرمجاز", 403);
   if (task.status !== "ACTIVE") return fail("تسک فعال نیست", 400);
 
-  // Stop any existing RUNNING entry for the user (compute duration, update totals)
-  const running = await db.timeEntry.findFirst({
-    where: { userId: user.id, status: "RUNNING" },
-  });
-  if (running) {
-    const now = new Date();
-    const duration = Math.max(
-      0,
-      Math.floor((now.getTime() - running.startedAt.getTime()) / 1000),
-    );
-    await db.timeEntry.update({
-      where: { id: running.id },
-      data: {
-        status: "COMPLETED",
-        endedAt: now,
-        durationSec: duration,
+  // Atomic: stop any running entry and start new one in a transaction
+  const entry = await db.$transaction(async (tx) => {
+    const running = await tx.timeEntry.findFirst({
+      where: { userId: user.id, status: "RUNNING" },
+    });
+    if (running) {
+      const now = new Date();
+      const duration = Math.max(
+        0,
+        Math.floor((now.getTime() - running.startedAt.getTime()) / 1000),
+      );
+      await tx.timeEntry.update({
+        where: { id: running.id },
+        data: { status: "COMPLETED", endedAt: now, durationSec: duration },
+      });
+      await tx.task.update({
+        where: { id: running.taskId },
+        data: { totalSeconds: { increment: duration } },
+      });
+      await tx.user.update({
+        where: { id: user.id },
+        data: { totalSeconds: { increment: duration } },
+      });
+    }
+
+    return tx.timeEntry.create({
+      data: { userId: user.id, taskId, status: "RUNNING" },
+      select: {
+        id: true, taskId: true, startedAt: true, endedAt: true,
+        durationSec: true, status: true, note: true, createdAt: true,
+        task: { select: { id: true, title: true, color: true } },
       },
     });
-    await db.task.update({
-      where: { id: running.taskId },
-      data: { totalSeconds: { increment: duration } },
-    });
-    await db.user.update({
-      where: { id: user.id },
-      data: { totalSeconds: { increment: duration } },
-    });
-  }
-
-  const entry = await db.timeEntry.create({
-    data: {
-      userId: user.id,
-      taskId,
-      status: "RUNNING",
-    },
-    select: {
-      id: true,
-      taskId: true,
-      startedAt: true,
-      endedAt: true,
-      durationSec: true,
-      status: true,
-      note: true,
-      createdAt: true,
-      task: { select: { id: true, title: true, color: true } },
-    },
   });
 
-  const res = ok({ entry });
-  return applyRefresh(res);
+  return applyRefresh(ok({ entry }));
 }

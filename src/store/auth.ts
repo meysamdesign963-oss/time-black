@@ -56,6 +56,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         method: "POST",
         credentials: "include",
       });
+    } catch (e) {
+      console.error("Logout request failed:", e);
     } finally {
       set({ user: null });
     }

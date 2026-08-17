@@ -73,7 +73,7 @@ export function generatePostJsonLd(post: {
       ? { image: post.imageUrl, thumbnailUrl: post.imageUrl }
       : {}),
     ...(post.videoUrl ? { video: post.videoUrl } : {}),
-    url: `/post/${post.slug || ""}`,
+    url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir"}/post/${post.slug || ""}`,
   };
 }
 
@@ -112,10 +112,10 @@ export function generateSiteJsonLd(): Record<string, unknown> {
     alternateName: "تایم بلک",
     description:
       "پلتفرم رقابت تایم‌محور — تسک‌های خود را تعریف کنید، تایمر را فعال کنید و در رتبه‌بندی ماهانه با دیگران رقابت کنید",
-    url: "/",
+    url: process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir",
     potentialAction: {
       "@type": "SearchAction",
-      target: "/search?q={search_term_string}",
+      target: `${process.env.NEXT_PUBLIC_BASE_URL || "https://timeblack.ir"}/search?q={search_term_string}`,
       "query-input": "required name=search_term_string",
     },
   };

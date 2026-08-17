@@ -26,8 +26,7 @@ export async function POST(
   }
 
   // Parse body (currently unused, but maintains a consistent API surface).
-  await parseJsonBody(request);
-
+  
   const { username } = await params;
   if (!username) return fail("نام کاربری الزامی است", 400);
 

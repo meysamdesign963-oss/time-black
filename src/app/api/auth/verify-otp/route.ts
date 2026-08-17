@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { issueSession, decideRoleForNewUser } from "@/services/auth.service";
@@ -11,6 +12,11 @@ import { writeAudit, getClientIp, parseJsonBody } from "@/lib/route-helpers";
 
 // Brute-force protection: max 5 verify attempts per 5 min per phone+IP.
 // A 5-digit OTP has 100k combinations; this limit makes brute force infeasible.
+/** Hash OTP code with SHA-256 for secure comparison */
+function hashOtp(code: string): string {
+  return crypto.createHash("sha256").update(code).digest("hex");
+}
+
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 5 * 60 * 1000;
 
@@ -36,7 +42,7 @@ export async function POST(request: Request) {
   const otp = await db.otpCode.findFirst({
     where: {
       phone,
-      code,
+      code: hashOtp(code),
       consumed: false,
       expiresAt: { gt: new Date() },
     },

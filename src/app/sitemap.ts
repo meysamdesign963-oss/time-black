@@ -1,3 +1,5 @@
+export const revalidate = 3600; // Re-generate at most once per hour
+
 import type { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 

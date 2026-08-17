@@ -6,7 +6,7 @@
  *    body: { recipientId, content }
  */
 import { db } from "@/lib/db";
-import { sanitizeText, rateLimit } from "@/utils/validation";
+import { sanitizeText, rateLimit, hasRestriction } from "@/utils/validation";
 import { ok, fail, unauthorized, notFound, forbidden } from "@/utils/api-response";
 import { getAuth, parseJsonBody } from "@/lib/route-helpers";
 
@@ -67,8 +67,8 @@ export async function GET(request: Request) {
       },
       data: { isRead: true, readAt: new Date() },
     })
-    .catch(() => {
-      // noop
+    .catch((e: unknown) => {
+      console.error("Failed to mark messages read:", e);
     });
 
   // Return in chronological order (oldest first)
@@ -81,10 +81,18 @@ export async function POST(request: Request) {
   const { user, applyRefresh } = await getAuth(request);
   if (!user) return unauthorized();
 
+  // Check message restriction
+  const userWithRestrictions = await db.user.findUnique({
+    where: { id: user.id },
+    select: { restrictions: true },
+  });
+  if (userWithRestrictions && hasRestriction(userWithRestrictions.restrictions || "", "canMessage"))
+    return forbidden("شما دسترسی ارسال پیام ندارید");
+
   // Rate limit: 30 messages per minute
   const rl = rateLimit(`message:${user.id}`, 30, 60 * 1000);
   if (!rl.ok) {
-    return fail("در حال ارسال پیام‌های زیاد. کمی صکر کنید.", 429);
+    return fail("در حال ارسال پیام‌های زیاد. کمی صبر کنید.", 429);
   }
 
   const body = await parseJsonBody<{ recipientId?: string; content?: string }>(

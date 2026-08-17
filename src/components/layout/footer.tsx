@@ -21,7 +21,7 @@ const LEGAL_LINKS = ["حریم خصوصی", "شرایط استفاده"];
 
 export function Footer({ compact = false }: { compact?: boolean }) {
   const { navigate } = useRouterStore();
-  const year = toPersianDigits(1404);
+  const year = toPersianDigits(new Date().getFullYear());
 
   if (compact) {
     return (

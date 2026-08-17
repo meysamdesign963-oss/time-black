@@ -36,7 +36,7 @@ export async function PATCH(request: Request) {
     } else if (typeof body.avatarUrl === "string") {
       // Accept local uploads or https URLs
       const url = body.avatarUrl.slice(0, 2000);
-      if (url.startsWith("/uploads/") || url.startsWith("https://") || url.startsWith("http://")) {
+      if (url.startsWith("/uploads/") || url.startsWith("https://") || url.startsWith("https://")) {
         data.avatarUrl = url;
       }
     }
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
       data.coverUrl = null;
     } else if (typeof body.coverUrl === "string") {
       const url = body.coverUrl.slice(0, 2000);
-      if (url.startsWith("/uploads/") || url.startsWith("https://") || url.startsWith("http://")) {
+      if (url.startsWith("/uploads/") || url.startsWith("https://") || url.startsWith("https://")) {
         data.coverUrl = url;
       }
     }

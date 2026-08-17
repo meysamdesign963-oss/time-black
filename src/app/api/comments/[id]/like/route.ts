@@ -1,7 +1,7 @@
 /**
  * POST /api/comments/[id]/like
  * --------------------------------
- * Toggle like on a comment. Creates CommentLike if not liked, removes if liked.
+ * Toggle like on a comment. Uses transaction for atomicity.
  */
 import { db } from "@/lib/db";
 import { ok, fail, unauthorized, notFound } from "@/utils/api-response";
@@ -16,7 +16,7 @@ export async function POST(
   if (!user) return unauthorized();
 
   const rl = rateLimit(`comment-like:${user.id}`, 30, 60 * 1000);
-  if (!rl.ok) return fail("در حال انجام actions زیاد.", 429);
+  if (!rl.ok) return fail("در حال انجام عملیات زیاد.", 429);
 
   const { id } = await params;
   const comment = await db.comment.findUnique({
@@ -30,23 +30,29 @@ export async function POST(
   });
 
   if (existing) {
-    await db.commentLike.delete({ where: { id: existing.id } });
-    await db.comment.update({
-      where: { id },
-      data: { likeCount: { decrement: 1 } },
-    });
+    // Unlike -- atomic transaction
+    await db.$transaction([
+      db.commentLike.delete({ where: { id: existing.id } }),
+      db.comment.update({
+        where: { id },
+        data: { likeCount: { decrement: 1 } },
+      }),
+    ]);
     const updated = await db.comment.findUnique({
       where: { id },
       select: { likeCount: true },
     });
-    return applyRefresh(ok({ liked: false, likeCount: updated?.likeCount ?? 0 }));
+    return applyRefresh(ok({ liked: false, likeCount: Math.max(0, updated?.likeCount ?? 0) }));
   }
 
-  await db.commentLike.create({ data: { commentId: id, userId: user.id } });
-  await db.comment.update({
-    where: { id },
-    data: { likeCount: { increment: 1 } },
-  });
+  // Like -- atomic transaction
+  await db.$transaction([
+    db.commentLike.create({ data: { commentId: id, userId: user.id } }),
+    db.comment.update({
+      where: { id },
+      data: { likeCount: { increment: 1 } },
+    }),
+  ]);
 
   // Notify comment author (if not self)
   if (comment.userId !== user.id) {
@@ -60,7 +66,7 @@ export async function POST(
         },
       });
     } catch {
-      // noop
+      // notification failure must not break the like
     }
   }
 

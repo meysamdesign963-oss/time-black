@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { ok, unauthorized, notFound } from "@/utils/api-response";
+import { ok, unauthorized, notFound, forbidden } from "@/utils/api-response";
 import { getAuth } from "@/lib/route-helpers";
 
 export async function POST(
@@ -14,8 +14,8 @@ export async function POST(
     where: { id },
     select: { id: true, userId: true },
   });
-  if (!notif) return notFound("اعلان یافت نشد");
-  if (notif.userId !== user.id) return notFound("اعلان یافت نشد");
+  if (!notif) return forbidden("دسترسی غیرمجاز");
+  if (notif.userId !== user.id) return forbidden("دسترسی غیرمجاز");
 
   await db.notification.update({
     where: { id },

@@ -54,7 +54,18 @@ export function maskPhone(phone: string): string {
 export function maskEmail(email: string): string {
   const [name, domain] = email.split("@");
   if (!domain) return email;
-  return `${name[0]}***@${domain}`;
+  return `${name?.[0] || "?"}***@${domain}`;
+}
+
+/** Check if a user has a specific restriction */
+export function hasRestriction(restrictionsStr: string, key: string): boolean {
+  if (!restrictionsStr) return false;
+  try {
+    const r = JSON.parse(restrictionsStr);
+    return r[key] === false;
+  } catch {
+    return false;
+  }
 }
 
 /** In-memory rate limiter: max N attempts per window per key */
@@ -69,6 +80,12 @@ export function rateLimit(
   const entry = buckets.get(key);
   if (!entry || entry.resetAt < now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });
+    // Periodic cleanup to prevent unbounded memory growth
+    if (buckets.size > 10000) {
+      for (const [k, v] of buckets) {
+        if (v.resetAt < now) buckets.delete(k);
+      }
+    }
     return { ok: true, remaining: maxAttempts - 1, resetAt: now + windowMs };
   }
   if (entry.count >= maxAttempts) {

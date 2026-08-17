@@ -24,34 +24,27 @@ export async function POST(
     Math.floor((now.getTime() - entry.startedAt.getTime()) / 1000),
   );
 
-  const updated = await db.timeEntry.update({
-    where: { id },
-    data: {
-      status: "COMPLETED",
-      endedAt: now,
-      durationSec: duration,
-    },
-    select: {
-      id: true,
-      taskId: true,
-      startedAt: true,
-      endedAt: true,
-      durationSec: true,
-      status: true,
-      note: true,
-      task: { select: { id: true, title: true, color: true } },
-    },
+  // Atomic: update entry + increment task + increment user in transaction
+  const updated = await db.$transaction(async (tx) => {
+    const u = await tx.timeEntry.update({
+      where: { id },
+      data: { status: "COMPLETED", endedAt: now, durationSec: duration },
+      select: {
+        id: true, taskId: true, startedAt: true, endedAt: true,
+        durationSec: true, status: true, note: true,
+        task: { select: { id: true, title: true, color: true } },
+      },
+    });
+    await tx.task.update({
+      where: { id: entry.taskId },
+      data: { totalSeconds: { increment: duration } },
+    });
+    await tx.user.update({
+      where: { id: user.id },
+      data: { totalSeconds: { increment: duration } },
+    });
+    return u;
   });
 
-  await db.task.update({
-    where: { id: entry.taskId },
-    data: { totalSeconds: { increment: duration } },
-  });
-  await db.user.update({
-    where: { id: user.id },
-    data: { totalSeconds: { increment: duration } },
-  });
-
-  const res = ok({ entry: updated, durationSec: duration });
-  return applyRefresh(res);
+  return applyRefresh(ok({ entry: updated, durationSec: duration }));
 }

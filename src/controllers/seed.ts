@@ -60,6 +60,10 @@ function randomInt(min: number, max: number): number {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("Refusing to seed in production");
+    process.exit(1);
+  } {
   console.log("🌱 Seeding Time Black database...\n");
 
   // Wipe (safe in dev)
